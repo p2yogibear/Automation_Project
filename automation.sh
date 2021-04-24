@@ -4,6 +4,8 @@ s3_bucket=upgrad-yogesh
 myname=Yogesh
 timestamp=$(date '+%d%m%Y-%H%M%S')
 
+FILE=/var/www/html/inventory.html
+
 sudo apt update -y
 
 if [[ -z $(apache2 -v 2>/dev/null) ]] && [[ -z $(httpd -v 2>/dev/null) ]]; then
@@ -21,12 +23,28 @@ else
   chkconfig httpd on
 fi
 
+
 tar -cvf /tmp/${myname}-httpd-logs-${timestamp}.tar /var/log/apache2/*.log
+size="$(wc -c <"${myname}-httpd-logs-${timestamp}.tar")"
+
+if [ ! -f "$FILE" ]; then
+    echo "$FILE does not exist."
+    echo "create the file."
+    echo "Log Type               Date Created               Type      Size " >> $FILE
+fi    
+    echo "httpd-logs		 $timestamp	            tar	      $size" >> $FILE    
+
 
 aws s3 \
 cp /tmp/${myname}-httpd-logs-${timestamp}.tar \
 s3://${s3_bucket}/${myname}-httpd-logs-${timestamp}.tar
 
+cronjob=/etc/cron.d/automation
 
+if [ ! -f "$cronjob" ]; then
+    echo "$cronjob does not exist."
+    touch /etc/cron.d/automation
+    echo "* * * * * root /root/Automation_Project/automation.sh" >> $cronjob
+fi    
 
 
